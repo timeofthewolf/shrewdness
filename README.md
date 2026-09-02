@@ -27,71 +27,6 @@ you edit Savvy, watch it turn into assembly and genes as you type, run it
 against a live terminal, and step through it one instruction at a time.
 → [`web/README.md`](web/README.md)
 
-## Quick start
-
-```sh
-cmake -B build                 # defaults to Release; the VM is the product
-cmake --build build -j
-
-./build/shrewd_demo            # the test suite: ~700k genome runs, all checked
-./build/shrewd_bench           # VM performance on representative workloads
-
-echo "(12+34)*2" | ./build/shrewdc run examples/calculator.savvy    # => 92
-./build/shrewdc run examples/replicator.savvy --trace   # => 1 offspring
-
-./build/shrewdness             # the IDE on http://127.0.0.1:7070/
-```
-
-The IDE's front end is a Svelte app. Build it once (`cd web && npm install &&
-npm run build`) and `shrewdness` will serve it. Or skip all of the above:
-
-```sh
-docker compose up --build      # then open http://localhost:7070/
-```
-
-Prebuilt binaries for Linux, macOS and Windows are on the
-[releases page](https://github.com/timeofthewolf/Shrewdness/releases).
-
-## The desktop app
-
-`desktop/` wraps the IDE as an Electron application: it starts `shrewdness` on a
-free port, waits for it, and puts the workbench in a native window. The backend
-is a child process, so it goes away when you close the app.
-
-Drag a tab out of the window and it becomes a window of its own; drag it onto
-another window and it moves there instead, closing the window it left if that
-was its last tab. Windows share one project — edit a file in either and the
-other picks it up — but each keeps its own pane layout, so a window is a view,
-not a copy.
-
-It also edits real files. **Open a folder from disk** in the explorer (or pass
-one on the command line) and the explorer shows what is actually there: `.savvy`,
-`.asm` and `.shrewd` files, real subfolders, with `node_modules`, `.git` and
-build directories skipped. Edits are written back to disk a moment after you
-stop typing, and changes made outside the IDE appear in it. Without a folder
-open, projects live in the browser's local storage exactly as they do on the
-web.
-
-```sh
-cmake --build build -j                       # the backend it launches
-cd web && npm run build && cd ..             # the front end it serves
-cd desktop && npm install && npm start
-```
-
-Neither the macOS nor the Windows build is signed by a paid developer
-certificate, so both operating systems warn on first launch. On macOS,
-right-click the app and choose **Open** rather than double-clicking (or run
-`xattr -dr com.apple.quarantine /Applications/Shrewdness.app`). On Windows,
-SmartScreen offers **More info → Run anyway**. The macOS app is ad-hoc signed so
-it runs on Apple Silicon; removing the warning entirely needs a Developer ID and
-notarisation.
-
-`npm run dist` packages it: an AppImage on Linux, an installer and a portable
-zip on Windows, a dmg on macOS, each with the `shrewdness` binary, `web/` and
-`examples/` bundled in. Put the binary for the platform you are packaging in
-`desktop/resources/bin/` first; the packager takes it from there rather than
-building it. Tagged releases carry all of them alongside the plain archives.
-
 ## The `shrewdc` toolchain
 
 ```
@@ -150,39 +85,6 @@ rearranges itself down to a phone rather than dropping features. Full tour in
 The backend holds no database and no accounts. Projects live in your browser's
 local storage, and the server just compiles, runs and traces what it's sent. To
 put it on a public domain, see [Hosting it](web/README.md#hosting-it).
-
-## Layout
-
-| | |
-|---|---|
-| `src/shrewd/` | the genome language: ISA, interpreter, assembler, mutation helpers |
-| `src/savvy/` | the human language: parser, compiler, decompiler |
-| `src/net/` | a minimal blocking HTTP/1.1 server — the IDE backend's transport |
-| `src/tools/` | `shrewdc` (CLI), `shrewdness` (IDE backend), `shrewd_demo` (test suite), `shrewd_bench` (benchmarks), `shrewd_fuzz` (differential fuzzer) |
-| `web/` | the IDE front end: a Svelte app served by `shrewdness` |
-| `examples/` | Savvy programs, each demonstrating one thing → [`examples/README.md`](examples/README.md) |
-
-Two libraries, `shrewd` and then `savvy` on top of it, never the other way
-round, plus `net`, which knows about neither. The interpreter has no idea that
-Savvy or the IDE exist.
-
-## Design rules the whole project obeys
-
-- **Any genome runs.** No parse step, no invalid opcode, no faulting
-  instruction. Edit a genome and you get a different program, never a broken
-  one.
-- **The language sets no limits.** `while (1 == 1)` runs forever; recursion goes
-  as deep as the host allows. Budgets (`shrewd::Limits`) are imposed by the
-  *caller*: the test suite, the IDE, or your own embedding. Policy belongs with
-  whoever pays for the resources.
-- **Nothing names a position.** Blocks are matched, procedures are called by
-  index. Anything holding an absolute address is destroyed by the first
-  insertion, which is measured rather than assumed (see the Shrewd README).
-- **Runs are reproducible.** A run is a pure function of
-  `(genome, input, seed)`. If you can't reproduce a result you can't trust it.
-- **Text forms round-trip.** `shrewdc asm` is bitwise-exact. `shrewdc savvy`
-  always produces something that compiles and runs, and for compiler-shaped
-  genomes something that behaves identically.
 
 ## Performance
 
